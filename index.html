@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Soroban Master: Custom Display & Smart Tutor</title>
+  <style>
+    * { 
+      box-sizing: border-box; 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+      -webkit-tap-highlight-color: transparent; 
+      touch-action: none; 
+      user-select: none; 
+      margin: 0; 
+      padding: 0;
+    }
+    
+    html, body {
+      min-height: 100%;
+      height: 100dvh;
+      background: #0f172a;
+      color: #f8fafc;
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: env(safe-area-inset-top, 6px) env(safe-area-inset-right, 6px) env(safe-area-inset-bottom, 6px) env(safe-area-inset-left, 6px);
+    }
+
+    .app-card {
+      background: #1e293b;
+      border-radius: 20px;
+      padding: 10px 12px;
+      width: 100%;
+      max-width: 480px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 6px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+      border: 1px solid #334155;
+    }
+
+    /* Primary Math Config Panel */
+    .settings-panel {
+      background: #0f172a;
+      border-radius: 12px;
+      padding: 6px 8px;
+      border: 1px solid #334155;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 8px;
+      flex-shrink: 0;
+    }
+    .setting-group {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+    }
+    .setting-group.full-width {
+      grid-column: span 2;
+    }
+    .setting-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #94a3b8;
+      white-space: nowrap;
+    }
+    .setting-select {
+      background: #1e293b;
+      color: #38bdf8;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 3px 5px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      outline: none;
+      flex-grow: 1;
+      max-width: 135px;
+      text-overflow: ellipsis;
+    }
+
+    /* Custom Display Settings Drawer / Bar */
+    .display-custom-bar {
+      background: #1e1b4b;
+      border: 1px solid #4338ca;
+      border-radius: 10px;
+      padding: 4px 8px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .disp-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      justify-content: space-between;
+    }
+    .disp-item label {
+      font-size: 0.68rem;
+      font-weight: 800;
+      color: #c7d2fe;
+      white-space: nowrap;
+    }
+    .disp-item select {
+      background: #0f172a;
+      color: #a5b4fc;
+      border: 1px solid #6366f1;
+      border-radius: 5px;
+      padding: 2px 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      outline: none;
+    }
+    
+    /* Problem Header & Math Stack */
+    .problem-box { 
+      background: #0f172a; 
+      border-radius: 14px; 
+      padding: 6px 12px; 
+      border: 1px solid #334155; 
+      flex-shrink: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      min-height: 90px;
+    }
+
+    .vertical-math {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-end;
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #38bdf8;
+      line-height: 1.1;
+      font-family: 'Courier New', Courier, monospace;
+      padding-right: 6px;
+    }
+
+    .rows-4 .vertical-math { font-size: 1.2rem; line-height: 1.05; }
+    .rows-5 .vertical-math { font-size: 1.02rem; line-height: 0.98; }
+
+    .math-row {
+      display: flex;
+      justify-content: flex-end;
+      width: 100%;
+      min-width: 65px;
+      padding: 1px 4px;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    .math-row.current-step-row {
+      background: rgba(56, 189, 248, 0.22);
+      border-left: 3px solid #38bdf8;
+    }
+    .math-row.completed-step-row {
+      color: #4ade80;
+      opacity: 0.75;
+    }
+
+    .math-op-row {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      border-bottom: 2px solid #38bdf8;
+      padding: 1px 4px;
+      min-width: 65px;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    .math-op-row.current-step-row {
+      background: rgba(56, 189, 248, 0.22);
+      border-left: 3px solid #38bdf8;
+    }
+    .math-op-row.completed-step-row {
+      color: #4ade80;
+      opacity: 0.75;
+    }
+
+    .math-ans-row {
+      color: #94a3b8;
+      font-size: 1.1em;
+      padding-top: 2px;
+      width: 100%;
+      text-align: right;
+    }
+
+    .problem-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      max-width: 190px;
+    }
+    .scores-row {
+      display: flex;
+      gap: 8px;
+      font-size: 0.8rem;
+      font-weight: 800;
+    }
+    .streak-badge { color: #fb923c; }
+    .high-badge { color: #facc15; }
+    .rule-badge { 
+      background: #854d0e; 
+      color: #fef08a; 
+      padding: 3px 6px; 
+      border-radius: 6px; 
+      font-size: 0.72rem; 
+      font-weight: 700; 
+      border: 1px solid #eab308;
+      text-align: center;
+      line-height: 1.15;
+    }
+
+    /* Dynamic Soroban Frame */
+    .soroban-frame { 
+      background: #78350f; 
+      border: 6px solid #451a03; 
+      border-radius: 16px; 
+      padding: 6px 8px; 
+      position: relative; 
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: inset 0 4px 14px rgba(0,0,0,0.6); 
+    }
+    .soroban-columns { 
+      display: flex; 
+      justify-content: space-around; 
+      position: relative; 
+      height: 100%;
+    }
+    .column-wrapper { 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      height: 100%;
+      position: relative; 
+      justify-content: space-between;
+      transition: width 0.2s;
+    }
+    .col-label { 
+      font-size: 0.72rem; 
+      font-weight: 800; 
+      color: #fef3c7; 
+      letter-spacing: 0.04em; 
+      text-align: center;
+      margin-bottom: 2px;
+    }
+    .col-val { 
+      font-size: 1.1rem; 
+      font-weight: 800; 
+      color: #38bdf8; 
+      background: #0f172a; 
+      padding: 1px 8px; 
+      border-radius: 6px; 
+      border: 1px solid #334155; 
+      margin-top: 2px;
+    }
+
+    /* Rod Decks */
+    .deck-top, .deck-bottom { 
+      width: 100%; 
+      position: relative; 
+      display: flex; 
+      justify-content: center; 
+    }
+    .rod-wire { 
+      position: absolute; 
+      top: 0; 
+      bottom: 0; 
+      width: 5px; 
+      background: #cbd5e1; 
+      border-radius: 3px; 
+      z-index: 1; 
+    }
+
+    /* Reckoning Beam */
+    .beam { 
+      width: 100%; 
+      background: #1e1b4b; 
+      border-top: 2px solid #312e81; 
+      border-bottom: 2px solid #0f172a; 
+      margin: 2px 0;
+      position: relative; 
+      z-index: 3; 
+      display: flex; 
+      justify-content: space-around; 
+      align-items: center; 
+    }
+    .unit-dot { width: 5px; height: 5px; background: #f8fafc; border-radius: 50%; }
+
+    /* Beads */
+    .bead { 
+      background: radial-gradient(circle, #f97316 25%, #c2410c 100%); 
+      border-radius: 14px; 
+      border: 2px solid #7c2d12; 
+      box-shadow: 0 3px 6px rgba(0,0,0,0.45); 
+      position: absolute; 
+      z-index: 2; 
+      cursor: grab;
+      touch-action: none;
+      will-change: transform;
+    }
+    .bead:active, .bead.dragging { 
+      cursor: grabbing; 
+      filter: brightness(1.15);
+    }
+
+    .bead.active-bead { 
+      background: radial-gradient(circle, #fb923c 30%, #ea580c 100%); 
+      border-color: #ffedd5; 
+      box-shadow: 0 0 8px rgba(251, 146, 60, 0.6);
+    }
+
+    /* Bottom Section */
+    .bottom-section {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .instruction-card {
+      background: #0f172a;
+      border: 1.5px solid #38bdf8;
+      border-radius: 10px;
+      padding: 6px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .instruction-icon {
+      font-size: 1.15rem;
+      flex-shrink: 0;
+    }
+    .instruction-text {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      line-height: 1.3;
+      text-align: left;
+      flex-grow: 1;
+    }
+    .instruction-text .step-highlight { color: #38bdf8; font-weight: 800; }
+    .instruction-text .rule-tag {
+      display: inline-block;
+      background: #854d0e;
+      color: #fef08a;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      margin-right: 4px;
+    }
+    .instruction-text .action-chunk { color: #f1f5f9; }
+
+    .status-bar { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      background: #0f172a; 
+      padding: 5px 12px; 
+      border-radius: 8px; 
+    }
+    .status-text { font-size: 1.05rem; font-weight: 700; color: #f8fafc; }
+    
+    .btn-row { display: flex; gap: 8px; }
+    .action-btn { 
+      flex: 1; 
+      padding: 9px; 
+      font-size: 0.95rem; 
+      border: none; 
+      border-radius: 10px; 
+      font-weight: 800; 
+      cursor: pointer; 
+    }
+    .btn-reset { background: #475569; color: white; }
+    .btn-check { background: #22c55e; color: #022c22; box-shadow: 0 3px 0 #15803d; }
+    .btn-next { background: #3b82f6; color: white; display: none; }
+  </style>
+</head>
+<body>
+  <div class="app-card" id="app-card">
+    <!-- Math Settings Matrix -->
+    <div class="settings-panel">
+      <div class="setting-group">
+        <span class="setting-label">Op:</span>
+        <select class="setting-select" id="op-select" onchange="updateSettings()">
+          <option value="add">Addition (+)</option>
+          <option value="sub">Subtraction (-)</option>
+          <option value="mixed" selected>Mixed (±)</option>
+        </select>
+      </div>
+
+      <div class="setting-group">
+        <span class="setting-label">Method:</span>
+        <select class="setting-select" id="mode-select" onchange="updateSettings()">
+          <option value="friends" selected>Friends (Regroup)</option>
+          <option value="standard">Standard Drill</option>
+        </select>
+      </div>
+
+      <div class="setting-group">
+        <span class="setting-label">Digits:</span>
+        <select class="setting-select" id="digits-select" onchange="updateSettings()">
+          <option value="1">1 Digit</option>
+          <option value="2" selected>2 Digits</option>
+          <option value="mix-1-2">Mix 1 & 2</option>
+          <option value="3">3 Digits</option>
+          <option value="mix-2-3">Mix 2 & 3</option>
+          <option value="mix-1-2-3">Mix 1-3</option>
+        </select>
+      </div>
+
+      <div class="setting-group">
+        <span class="setting-label">Rows:</span>
+        <select class="setting-select" id="rows-select" onchange="updateSettings()">
+          <option value="2">2 Rows</option>
+          <option value="3">3 Rows</option>
+          <option value="4">4 Rows</option>
+          <option value="5" selected>5 Rows</option>
+        </select>
+      </div>
+
+      <div class="setting-group full-width">
+        <span class="setting-label">Tutor Hints:</span>
+        <select class="setting-select" id="guide-select" onchange="updateSettings()" style="max-width: 100%;">
+          <option value="on" selected>💡 Live Tutor Steps (ON)</option>
+          <option value="off">Off (Independent Practice)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Custom Display Settings Bar -->
+    <div class="display-custom-bar">
+      <div class="disp-item">
+        <label>Beam Gap:</label>
+        <select id="gap-select" onchange="updateDisplayLayout()">
+          <option value="tight" selected>Tight (Flush)</option>
+          <option value="compact">Compact</option>
+          <option value="traditional">Traditional</option>
+        </select>
+      </div>
+
+      <div class="disp-item">
+        <label>Bead Size:</label>
+        <select id="size-select" onchange="updateDisplayLayout()">
+          <option value="small">Small</option>
+          <option value="medium" selected>Medium</option>
+          <option value="large">Large (Tablet)</option>
+        </select>
+      </div>
+
+      <div class="disp-item">
+        <label>Beam Bar:</label>
+        <select id="beam-select" onchange="updateDisplayLayout()">
+          <option value="10">Slim (10px)</option>
+          <option value="14" selected>Med (14px)</option>
+          <option value="18">Thick (18px)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Problem Display & High Score Meta -->
+    <div class="problem-box">
+      <div class="vertical-math" id="vertical-math-container"></div>
+
+      <div class="problem-meta">
+        <div class="scores-row">
+          <span class="streak-badge">🔥 <span id="streak-num">0</span></span>
+          <span class="high-badge">🏆 <span id="high-score">0</span></span>
+        </div>
+        <div class="rule-badge" id="rule-tip">Smart Tutor Active</div>
+      </div>
+    </div>
+
+    <!-- Soroban Board -->
+    <div class="soroban-frame">
+      <div class="soroban-columns" id="soroban-columns"></div>
+    </div>
+
+    <!-- Bottom Controls & Dynamic Step-by-Step Instruction Card -->
+    <div class="bottom-section">
+      <div class="instruction-card" id="instruction-card">
+        <span class="instruction-icon" id="guide-icon">💡</span>
+        <div class="instruction-text" id="guide-text">Step 1: Set initial number on the beads.</div>
+      </div>
+
+      <div class="status-bar">
+        <span>Soroban Total:</span>
+        <span class="status-text" id="total-val">0</span>
+      </div>
+
+      <div class="btn-row">
+        <button class="action-btn btn-reset" onclick="resetAbacus()">Clear (0)</button>
+        <button class="action-btn btn-check" id="btn-check" onclick="verifySolution()">Check Beads</button>
+        <button class="action-btn btn-next" id="btn-next" onclick="nextProblem()">Next Problem →</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let audioCtx = null;
+    function initAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+    function playTone(freq, duration, type='sine') {
+      initAudio();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+    function playBeadClick() { playTone(440, 0.035, 'triangle'); }
+    function playStepDing() {
+      initAudio();
+      playTone(659.25, 0.08, 'sine');
+    }
+    function playWinSound() {
+      initAudio();
+      const now = audioCtx.currentTime;
+      [523.25, 659.25, 783.99, 1046.50].forEach((f, idx) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.setValueAtTime(f, now + idx * 0.08);
+        gain.gain.setValueAtTime(0.2, now + idx * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.2);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now + idx * 0.08);
+        osc.stop(now + idx * 0.08 + 0.2);
+      });
+    }
+
+    let operationMode = 'mixed';
+    let guidedHintsMode = 'on';
+    let digitMode = '2';
+    let numRows = 5;
+    let problemMode = 'friends';
+    let currentProblem = null;
+    let currentStepIndex = 0;
+    let streak = 0;
+    let highScore = parseInt(localStorage.getItem('soroban_high_streak') || '0', 10);
+
+    // Custom Layout Settings Presets
+    let beamGapSetting = localStorage.getItem('soroban_beam_gap') || 'tight';
+    let beadSizeSetting = localStorage.getItem('soroban_bead_size') || 'medium';
+    let beamThicknessSetting = localStorage.getItem('soroban_beam_thick') || '14';
+
+    document.getElementById('gap-select').value = beamGapSetting;
+    document.getElementById('size-select').value = beadSizeSetting;
+    document.getElementById('beam-select').value = beamThicknessSetting;
+
+    // Dynamic Geometry variables
+    let DECK_TOP_H = 68;
+    let DECK_BOTTOM_H = 150;
+    let BEAD_H = 28;
+    let UPPER_TRAVEL = 34;
+    let LOWER_TRAVEL = -20;
+    let UPPER_TOP_REST = 4;
+    let LOWER_REST_OFFSETS = [20, 48, 76, 104];
+
+    const colNames = { tenThousands: '10,000s', thousands: '1,000s', hundreds: '100s', tens: '10s', ones: '1s' };
+    const colLabelsShort = { tenThousands: '10ks', thousands: '1000s', hundreds: '100s', tens: '10s', ones: '1s' };
+    const colMultipliers = { tenThousands: 10000, thousands: 1000, hundreds: 100, tens: 10, ones: 1 };
+    const allColOrder = ['tenThousands', 'thousands', 'hundreds', 'tens', 'ones'];
+
+    let activeCols = ['thousands', 'hundreds', 'tens', 'ones'];
+
+    const board = {
+      tenThousands: { upper: false, lower: 0 },
+      thousands: { upper: false, lower: 0 },
+      hundreds: { upper: false, lower: 0 },
+      tens: { upper: false, lower: 0 },
+      ones: { upper: false, lower: 0 }
+    };
+
+    document.getElementById('high-score').textContent = highScore;
+
+    function updateDisplayLayout() {
+      beamGapSetting = document.getElementById('gap-select').value;
+      beadSizeSetting = document.getElementById('size-select').value;
+      beamThicknessSetting = document.getElementById('beam-select').value;
+
+      localStorage.setItem('soroban_beam_gap', beamGapSetting);
+      localStorage.setItem('soroban_bead_size', beadSizeSetting);
+      localStorage.setItem('soroban_beam_thick', beamThicknessSetting);
+
+      // 1. Calculate Bead Height
+      if (beadSizeSetting === 'small') BEAD_H = 24;
+      else if (beadSizeSetting === 'large') BEAD_H = 32;
+      else BEAD_H = 28;
+
+      // 2. Calculate Travel & Deck Heights based on Beam Gap Preset
+      // Tight (Flush) minimizes resting distance from the reckoning beam for tablets
+      if (beamGapSetting === 'tight') {
+        DECK_TOP_H = BEAD_H + 20;
+        UPPER_TOP_REST = 2;
+        UPPER_TRAVEL = 18; // Moves right down to touching beam
+
+        const step = BEAD_H + 2;
+        LOWER_REST_OFFSETS = [8, 8 + step, 8 + step*2, 8 + step*3];
+        LOWER_TRAVEL = -8; // Snaps directly flush to bottom of beam
+        DECK_BOTTOM_H = 8 + step*4 + 4;
+      } else if (beamGapSetting === 'compact') {
+        DECK_TOP_H = BEAD_H + 28;
+        UPPER_TOP_REST = 4;
+        UPPER_TRAVEL = 24;
+
+        const step = BEAD_H + 2;
+        LOWER_REST_OFFSETS = [16, 16 + step, 16 + step*2, 16 + step*3];
+        LOWER_TRAVEL = -16;
+        DECK_BOTTOM_H = 16 + step*4 + 8;
+      } else {
+        // Traditional
+        DECK_TOP_H = BEAD_H + 42;
+        UPPER_TOP_REST = 4;
+        UPPER_TRAVEL = 38;
+
+        const step = BEAD_H + 2;
+        LOWER_REST_OFFSETS = [24, 24 + step, 24 + step*2, 24 + step*3];
+        LOWER_TRAVEL = -24;
+        DECK_BOTTOM_H = 24 + step*4 + 12;
+      }
+
+      renderSorobanColumns();
+    }
+
+    function updateSettings() {
+      operationMode = document.getElementById('op-select').value;
+      guidedHintsMode = document.getElementById('guide-select').value;
+      digitMode = document.getElementById('digits-select').value;
+      numRows = parseInt(document.getElementById('rows-select').value, 10);
+      problemMode = document.getElementById('mode-select').value;
+      
+      const appCard = document.getElementById('app-card');
+      appCard.className = `app-card rows-${numRows}`;
+
+      streak = 0;
+      document.getElementById('streak-num').textContent = streak;
+      nextProblem();
+    }
+
+    function determineRequiredColumns(problem) {
+      let maxValAcrossAll = problem.expected;
+      problem.rows.forEach(r => {
+        if (r.val > maxValAcrossAll) maxValAcrossAll = r.val;
+      });
+      if (problem.stepTargets) {
+        problem.stepTargets.forEach(st => {
+          if (st > maxValAcrossAll) maxValAcrossAll = st;
+        });
+      }
+
+      let baseDigits = 2;
+      if (digitMode === '1') baseDigits = 2;
+      else if (digitMode === '2' || digitMode === 'mix-1-2') baseDigits = 3;
+      else if (digitMode === '3' || digitMode === 'mix-2-3' || digitMode === 'mix-1-2-3') baseDigits = 4;
+
+      const digitsNeededFromVal = maxValAcrossAll.toString().length;
+      const totalRods = Math.min(allColOrder.length, Math.max(baseDigits, digitsNeededFromVal));
+      
+      return allColOrder.slice(allColOrder.length - totalRods);
+    }
+
+    function renderSorobanColumns() {
+      const container = document.getElementById('soroban-columns');
+      container.innerHTML = '';
+
+      const count = activeCols.length;
+      const widthMap = { 1: '78%', 2: '46%', 3: '31%', 4: '23%', 5: '19%' };
+      const beadMap = { 
+        1: 'clamp(74px, 20vw, 88px)', 
+        2: 'clamp(62px, 16vw, 76px)', 
+        3: 'clamp(48px, 13vw, 62px)', 
+        4: 'clamp(38px, 10vw, 48px)',
+        5: 'clamp(32px, 8.5vw, 40px)'
+      };
+
+      const colWidth = widthMap[count] || '19%';
+      const beadWidth = beadMap[count] || 'clamp(32px, 8.5vw, 40px)';
+      const beamThick = parseInt(beamThicknessSetting, 10);
+
+      activeCols.forEach(col => {
+        const colDiv = document.createElement('div');
+        colDiv.className = 'column-wrapper';
+        colDiv.style.width = colWidth;
+        colDiv.id = `col-${col}`;
+
+        colDiv.innerHTML = `
+          <div class="col-label">${colNames[col]}</div>
+          <div class="deck-top" style="height: ${DECK_TOP_H}px;">
+            <div class="rod-wire"></div>
+            <div class="bead upper" id="${col}-upper" data-col="${col}" data-type="upper" style="width: ${beadWidth}; height: ${BEAD_H}px; top: ${UPPER_TOP_REST}px;"></div>
+          </div>
+          <div class="beam" style="height: ${beamThick}px;"><div class="unit-dot"></div></div>
+          <div class="deck-bottom" style="height: ${DECK_BOTTOM_H}px;">
+            <div class="rod-wire"></div>
+            <div class="bead lower lower-0" id="${col}-lower-0" data-col="${col}" data-type="lower" data-idx="0" style="width: ${beadWidth}; height: ${BEAD_H}px; top: ${LOWER_REST_OFFSETS[0]}px;"></div>
+            <div class="bead lower lower-1" id="${col}-lower-1" data-col="${col}" data-type="lower" data-idx="1" style="width: ${beadWidth}; height: ${BEAD_H}px; top: ${LOWER_REST_OFFSETS[1]}px;"></div>
+            <div class="bead lower lower-2" id="${col}-lower-2" data-col="${col}" data-type="lower" data-idx="2" style="width: ${beadWidth}; height: ${BEAD_H}px; top: ${LOWER_REST_OFFSETS[2]}px;"></div>
+            <div class="bead lower lower-3" id="${col}-lower-3" data-col="${col}" data-type="lower" data-idx="3" style="width: ${beadWidth}; height: ${BEAD_H}px; top: ${LOWER_REST_OFFSETS[3]}px;"></div>
+          </div>
+          <div class="col-val" id="${col}-val">0</div>
+        `;
+        container.appendChild(colDiv);
+      });
+
+      attachPointerEvents();
+      resetAbacus();
+    }
+
+    function applyBeadTransforms(col) {
+      const uEl = document.getElementById(`${col}-upper`);
+      if (!uEl) return;
+      uEl.style.transition = 'transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1)';
+      uEl.style.transform = board[col].upper ? `translateY(${UPPER_TRAVEL}px)` : 'translateY(0px)';
+      uEl.classList.toggle('active-bead', board[col].upper);
+
+      for (let i = 0; i < 4; i++) {
+        const lEl = document.getElementById(`${col}-lower-${i}`);
+        if (!lEl) continue;
+        const isActive = i < board[col].lower;
+        lEl.style.transition = 'transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1)';
+        lEl.style.transform = isActive ? `translateY(${LOWER_TRAVEL}px)` : 'translateY(0px)';
+        lEl.classList.toggle('active-bead', isActive);
+      }
+
+      updateDisplayValues();
+    }
+
+    function getBoardTotal() {
+      let total = 0;
+      activeCols.forEach(col => {
+        const val = (board[col].upper ? 5 : 0) + board[col].lower;
+        total += val * colMultipliers[col];
+      });
+      return total;
+    }
+
+    function updateDisplayValues() {
+      activeCols.forEach(col => {
+        const val = (board[col].upper ? 5 : 0) + board[col].lower;
+        const valEl = document.getElementById(`${col}-val`);
+        if (valEl) valEl.textContent = val;
+      });
+
+      const total = getBoardTotal();
+      document.getElementById('total-val').textContent = total;
+
+      checkStepProgress(total);
+    }
+
+    // --- Verified Soroban Step Simulator ---
+    function applySingleRodAdd(state, rodKey, digit) {
+      const moves = [];
+      const current = state[rodKey];
+      const rodName = colLabelsShort[rodKey];
+      const has5 = current >= 5;
+      const lower = current % 5;
+
+      if (digit === 0) return moves;
+
+      if (lower + digit <= 4) {
+        state[rodKey] += digit;
+        moves.push(`<span class="action-chunk">Push <b>${digit} UP</b> on ${rodName}</span>`);
+      } else if (!has5 && digit >= 5 && (lower + (digit - 5) <= 4)) {
+        state[rodKey] += digit;
+        const rem = digit - 5;
+        if (rem === 0) {
+          moves.push(`<span class="action-chunk">Push <b>5 DOWN</b> on ${rodName}</span>`);
+        } else {
+          moves.push(`<span class="action-chunk">Pinch <b>5 & ${rem}</b> on ${rodName}</span>`);
+        }
+      } else if (!has5 && (lower + digit >= 5) && (current + digit <= 9)) {
+        state[rodKey] += digit;
+        const friend5 = 5 - digit;
+        moves.push(`<span class="rule-tag">+5 Friend</span> <span class="action-chunk">Push <b>5 DOWN</b>, Push <b>${friend5} DOWN</b> on ${rodName}</span>`);
+      } else {
+        const nextRodKey = allColOrder[allColOrder.indexOf(rodKey) - 1];
+        const nextRodName = colLabelsShort[nextRodKey];
+        const friend10 = 10 - digit;
+
+        const carryMoves = applySingleRodAdd(state, nextRodKey, 1);
+        carryMoves.forEach(m => moves.push(m));
+
+        if (friend10 <= lower) {
+          state[rodKey] = (has5 ? 5 : 0) + (lower - friend10);
+          moves.push(`<span class="rule-tag">+10 Friend</span> <span class="action-chunk">Push <b>${friend10} DOWN</b> on ${rodName}</span>`);
+        } else if (has5 && friend10 >= 5) {
+          const lowerRem = friend10 - 5;
+          state[rodKey] = lower - lowerRem;
+          if (lowerRem === 0) {
+            moves.push(`<span class="rule-tag">+10 Friend</span> <span class="action-chunk">Push <b>5 UP</b> on ${rodName}</span>`);
+          } else {
+            moves.push(`<span class="rule-tag">+10 Friend</span> <span class="action-chunk">Split <b>5 & ${lowerRem}</b> on ${rodName}</span>`);
+          }
+        } else if (has5 && friend10 < 5) {
+          const lowerUp = 5 - friend10;
+          state[rodKey] = lower + lowerUp;
+          moves.push(`<span class="rule-tag">Combo Carry</span> <span class="action-chunk">Push <b>5 UP</b> & push <b>${lowerUp} UP</b> on ${rodName}</span>`);
+        }
+      }
+
+      return moves;
+    }
+
+    function applySingleRodSub(state, rodKey, digit) {
+      const moves = [];
+      const current = state[rodKey];
+      const rodName = colLabelsShort[rodKey];
+      const has5 = current >= 5;
+      const lower = current % 5;
+
+      if (digit === 0) return moves;
+
+      if (digit <= lower) {
+        state[rodKey] -= digit;
+        moves.push(`<span class="action-chunk">Push <b>${digit} DOWN</b> on ${rodName}</span>`);
+      } else if (has5 && digit >= 5 && (digit - 5 <= lower)) {
+        state[rodKey] -= digit;
+        const rem = digit - 5;
+        if (rem === 0) {
+          moves.push(`<span class="action-chunk">Push <b>5 UP</b> on ${rodName}</span>`);
+        } else {
+          moves.push(`<span class="action-chunk">Split/Separate <b>5 UP & ${rem} DOWN</b> on ${rodName}</span>`);
+        }
+      } else if (has5 && (current - digit >= 0) && (current - digit < 5)) {
+        state[rodKey] -= digit;
+        const friend5 = 5 - digit;
+        moves.push(`<span class="rule-tag">-5 Friend</span> <span class="action-chunk">Push <b>5 UP</b>, Push <b>${friend5} UP</b> on ${rodName}</span>`);
+      } else {
+        const nextRodKey = allColOrder[allColOrder.indexOf(rodKey) - 1];
+        const friend10 = 10 - digit;
+
+        const borrowMoves = applySingleRodSub(state, nextRodKey, 1);
+        borrowMoves.forEach(m => moves.push(m));
+
+        if (lower + friend10 <= 4) {
+          state[rodKey] = (has5 ? 5 : 0) + (lower + friend10);
+          moves.push(`<span class="rule-tag">-10 Borrow</span> <span class="action-chunk">Push <b>${friend10} UP</b> on ${rodName}</span>`);
+        } else if (!has5 && friend10 >= 5 && (lower + (friend10 - 5) <= 4)) {
+          const lowerUp = friend10 - 5;
+          state[rodKey] = 5 + lower + lowerUp;
+          if (lowerUp === 0) {
+            moves.push(`<span class="rule-tag">-10 Borrow</span> <span class="action-chunk">Push <b>5 DOWN</b> on ${rodName}</span>`);
+          } else {
+            moves.push(`<span class="rule-tag">-10 Borrow</span> <span class="action-chunk">Pinch <b>5 DOWN & ${lowerUp} UP</b> on ${rodName}</span>`);
+          }
+        } else if (!has5 && friend10 < 5) {
+          const lowerDown = 5 - friend10;
+          state[rodKey] = 5 + (lower - lowerDown);
+          moves.push(`<span class="rule-tag">Combo Borrow</span> <span class="action-chunk">Push <b>5 DOWN</b> & push <b>${lowerDown} DOWN</b> on ${rodName}</span>`);
+        }
+      }
+
+      return moves;
+    }
+
+    function simulateTutorInstructions(startTotal, op, operand) {
+      if (!op) {
+        const digits = operand.toString().split('').map(Number);
+        const instructions = [];
+        if (digits.length === 1) {
+          instructions.push(`Set <b>${digits[0]}</b> on 1s rod`);
+        } else if (digits.length === 2) {
+          instructions.push(`Set <b>${digits[0]}</b> on 10s rod`);
+          if (digits[1] > 0) instructions.push(`Set <b>${digits[1]}</b> on 1s rod`);
+        } else if (digits.length === 3) {
+          instructions.push(`Set <b>${digits[0]}</b> on 100s rod`);
+          if (digits[1] > 0) instructions.push(`Set <b>${digits[1]}</b> on 10s rod`);
+          if (digits[2] > 0) instructions.push(`Set <b>${digits[2]}</b> on 1s rod`);
+        }
+        return `Step 1: ${instructions.join(' ➔ ')}`;
+      }
+
+      const simState = {
+        tenThousands: Math.floor((startTotal % 100000) / 10000),
+        thousands: Math.floor((startTotal % 10000) / 1000),
+        hundreds: Math.floor((startTotal % 1000) / 100),
+        tens: Math.floor((startTotal % 100) / 10),
+        ones: startTotal % 10
+      };
+
+      const digits = operand.toString().split('').map(Number);
+      const allMoves = [];
+
+      if (op === '+') {
+        if (digits.length === 1) {
+          const m = applySingleRodAdd(simState, 'ones', digits[0]);
+          m.forEach(act => allMoves.push(act));
+        } else if (digits.length === 2) {
+          const mTens = applySingleRodAdd(simState, 'tens', digits[0]);
+          mTens.forEach(act => allMoves.push(act));
+          const mOnes = applySingleRodAdd(simState, 'ones', digits[1]);
+          mOnes.forEach(act => allMoves.push(act));
+        } else if (digits.length === 3) {
+          const mHund = applySingleRodAdd(simState, 'hundreds', digits[0]);
+          mHund.forEach(act => allMoves.push(act));
+          const mTens = applySingleRodAdd(simState, 'tens', digits[1]);
+          mTens.forEach(act => allMoves.push(act));
+          const mOnes = applySingleRodAdd(simState, 'ones', digits[2]);
+          mOnes.forEach(act => allMoves.push(act));
+        }
+      } else {
+        if (digits.length === 1) {
+          const m = applySingleRodSub(simState, 'ones', digits[0]);
+          m.forEach(act => allMoves.push(act));
+        } else if (digits.length === 2) {
+          const mTens = applySingleRodSub(simState, 'tens', digits[0]);
+          mTens.forEach(act => allMoves.push(act));
+          const mOnes = applySingleRodSub(simState, 'ones', digits[1]);
+          mOnes.forEach(act => allMoves.push(act));
+        } else if (digits.length === 3) {
+          const mHund = applySingleRodSub(simState, 'hundreds', digits[0]);
+          mHund.forEach(act => allMoves.push(act));
+          const mTens = applySingleRodSub(simState, 'tens', digits[1]);
+          mTens.forEach(act => allMoves.push(act));
+          const mOnes = applySingleRodSub(simState, 'ones', digits[2]);
+          mOnes.forEach(act => allMoves.push(act));
+        }
+      }
+
+      const joined = allMoves.join(' ➔ ');
+      return `Step ${currentStepIndex + 1} (<span class="step-highlight">${op}${operand}</span>): ${joined || `Set ${op}${operand}`}`;
+    }
+
+    function updateStepInstruction() {
+      const guideBox = document.getElementById('instruction-card');
+      const guideText = document.getElementById('guide-text');
+      const guideIcon = document.getElementById('guide-icon');
+
+      if (guidedHintsMode === 'off') {
+        guideBox.style.border = '1px solid #334155';
+        guideIcon.textContent = '🎯';
+        guideText.innerHTML = `Independent Drill: Calculate row-by-row on beads and tap <b>Check Beads</b>.`;
+        return;
+      }
+
+      guideBox.style.border = '1.5px solid #38bdf8';
+      guideIcon.textContent = '💡';
+
+      if (!currentProblem || !currentProblem.stepTargets) return;
+
+      if (currentStepIndex >= currentProblem.rows.length) {
+        guideIcon.textContent = '🎉';
+        guideText.innerHTML = `All rows completed! Tap <span class="step-highlight">Check Beads</span> to verify.`;
+        return;
+      }
+
+      const currentRow = currentProblem.rows[currentStepIndex];
+      const prevTotal = currentStepIndex === 0 ? 0 : currentProblem.stepTargets[currentStepIndex - 1];
+
+      guideText.innerHTML = simulateTutorInstructions(prevTotal, currentRow.op, currentRow.val);
+
+      document.querySelectorAll('.math-row, .math-op-row').forEach((el, idx) => {
+        el.classList.toggle('current-step-row', idx === currentStepIndex);
+        el.classList.toggle('completed-step-row', idx < currentStepIndex);
+      });
+    }
+
+    function checkStepProgress(total) {
+      if (!currentProblem || !currentProblem.stepTargets) return;
+
+      if (currentStepIndex < currentProblem.stepTargets.length) {
+        if (total === currentProblem.stepTargets[currentStepIndex]) {
+          playStepDing();
+          currentStepIndex++;
+          updateStepInstruction();
+        }
+      }
+    }
+
+    // --- Multi-Touch Interaction Engine ---
+    const activeTouches = new Map();
+
+    function attachPointerEvents() {
+      document.querySelectorAll('.bead').forEach(bead => {
+        bead.addEventListener('pointerdown', handlePointerDown);
+      });
+    }
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerUp);
+
+    function handlePointerDown(e) {
+      initAudio();
+      const bead = e.currentTarget;
+      const col = bead.dataset.col;
+      const type = bead.dataset.type;
+      const idx = type === 'lower' ? parseInt(bead.dataset.idx, 10) : null;
+
+      const session = {
+        element: bead,
+        col: col,
+        type: type,
+        idx: idx,
+        startY: e.clientY,
+        curY: e.clientY,
+        initialUpperState: board[col].upper,
+        initialLowerCount: board[col].lower,
+        moved: false
+      };
+
+      activeTouches.set(e.pointerId, session);
+      bead.classList.add('dragging');
+      bead.setPointerCapture(e.pointerId);
+    }
+
+    function handlePointerMove(e) {
+      const session = activeTouches.get(e.pointerId);
+      if (!session) return;
+
+      const dy = e.clientY - session.startY;
+      if (Math.abs(dy) > 3) session.moved = true;
+
+      const { col, type, idx } = session;
+
+      if (type === 'upper') {
+        const el = session.element;
+        el.style.transition = 'none';
+        const startOffset = session.initialUpperState ? UPPER_TRAVEL : 0;
+        const currentPos = Math.max(0, Math.min(UPPER_TRAVEL, startOffset + dy));
+        el.style.transform = `translateY(${currentPos}px)`;
+      } else {
+        if (dy < 0) {
+          const delta = Math.max(LOWER_TRAVEL, dy);
+          for (let i = 0; i <= idx; i++) {
+            const lEl = document.getElementById(`${col}-lower-${i}`);
+            if (!lEl) continue;
+            lEl.style.transition = 'none';
+            if (i < session.initialLowerCount) {
+              lEl.style.transform = `translateY(${LOWER_TRAVEL}px)`;
+            } else {
+              lEl.style.transform = `translateY(${delta}px)`;
+            }
+          }
+          for (let i = idx + 1; i < 4; i++) {
+            const lEl = document.getElementById(`${col}-lower-${i}`);
+            if (lEl) {
+              lEl.style.transition = 'none';
+              const wasActive = i < session.initialLowerCount;
+              lEl.style.transform = wasActive ? `translateY(${LOWER_TRAVEL}px)` : 'translateY(0px)';
+            }
+          }
+        } else if (dy > 0) {
+          const delta = Math.min(-LOWER_TRAVEL, dy);
+          for (let i = idx; i < session.initialLowerCount; i++) {
+            const lEl = document.getElementById(`${col}-lower-${i}`);
+            if (!lEl) continue;
+            lEl.style.transition = 'none';
+            lEl.style.transform = `translateY(${LOWER_TRAVEL + delta}px)`;
+          }
+          for (let i = 0; i < idx; i++) {
+            const lEl = document.getElementById(`${col}-lower-${i}`);
+            if (lEl && i < session.initialLowerCount) {
+              lEl.style.transition = 'none';
+              lEl.style.transform = `translateY(${LOWER_TRAVEL}px)`;
+            }
+          }
+        }
+      }
+    }
+
+    function handlePointerUp(e) {
+      const session = activeTouches.get(e.pointerId);
+      if (!session) return;
+
+      const { col, type, idx, startY, moved, initialUpperState, initialLowerCount } = session;
+      const dy = e.clientY - startY;
+      const bead = session.element;
+      bead.classList.remove('dragging');
+
+      let stateChanged = false;
+      const threshold = Math.abs(type === 'upper' ? UPPER_TRAVEL : LOWER_TRAVEL) * 0.35;
+
+      if (type === 'upper') {
+        if (!moved) {
+          board[col].upper = !initialUpperState;
+          stateChanged = true;
+        } else {
+          if (dy > threshold) board[col].upper = true;
+          else if (dy < -threshold) board[col].upper = false;
+          else board[col].upper = initialUpperState;
+          if (board[col].upper !== initialUpperState) stateChanged = true;
+        }
+      } else {
+        if (!moved) {
+          if (board[col].lower === idx + 1) board[col].lower = idx;
+          else board[col].lower = idx + 1;
+          stateChanged = true;
+        } else {
+          if (dy < -threshold) {
+            board[col].lower = Math.max(board[col].lower, idx + 1);
+            if (board[col].lower !== initialLowerCount) stateChanged = true;
+          } else if (dy > threshold) {
+            board[col].lower = Math.min(board[col].lower, idx);
+            if (board[col].lower !== initialLowerCount) stateChanged = true;
+          }
+        }
+      }
+
+      if (stateChanged) playBeadClick();
+      applyBeadTransforms(col);
+      activeTouches.delete(e.pointerId);
+    }
+
+    function resetAbacus() {
+      playBeadClick();
+      Object.keys(board).forEach(col => {
+        board[col].upper = false;
+        board[col].lower = 0;
+        applyBeadTransforms(col);
+      });
+      currentStepIndex = 0;
+      updateStepInstruction();
+    }
+
+    function getRandomNumberByTier(tier, forceComplement = false) {
+      const min = tier === 1 ? 1 : Math.pow(10, tier - 1);
+      const max = Math.pow(10, tier) - 1;
+
+      if (forceComplement) {
+        const triggers = [3, 4, 6, 7, 8, 9];
+        const unit = triggers[Math.floor(Math.random() * triggers.length)];
+        if (tier === 1) return unit;
+        const higherDigits = Math.floor(Math.random() * Math.pow(10, tier - 1)) * 10;
+        return Math.max(min, higherDigits + unit);
+      }
+
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function pickDigitTier() {
+      if (digitMode === '1') return 1;
+      if (digitMode === '2') return 2;
+      if (digitMode === '3') return 3;
+      if (digitMode === 'mix-1-2') return Math.random() < 0.5 ? 1 : 2;
+      if (digitMode === 'mix-2-3') return Math.random() < 0.5 ? 2 : 3;
+      if (digitMode === 'mix-1-2-3') {
+        const r = Math.random();
+        return r < 0.33 ? 1 : (r < 0.66 ? 2 : 3);
+      }
+      return 2;
+    }
+
+    function generateProblem() {
+      const numbers = [];
+      const stepTargets = [];
+      let runningTotal = 0;
+
+      const firstTier = pickDigitTier();
+      let firstNum = getRandomNumberByTier(firstTier, false);
+      
+      if (operationMode === 'sub') {
+        const minBuffer = numRows * (Math.pow(10, firstTier - 1) + 2);
+        firstNum = Math.max(firstNum, minBuffer);
+      }
+
+      numbers.push({ op: '', val: firstNum });
+      runningTotal = firstNum;
+      stepTargets.push(runningTotal);
+
+      for (let r = 1; r < numRows; r++) {
+        let op = '+';
+        let tier = pickDigitTier();
+
+        if (operationMode === 'add') {
+          op = '+';
+        } else if (operationMode === 'sub') {
+          op = '-';
+        } else {
+          op = (runningTotal > 12 && Math.random() < 0.5) ? '-' : '+';
+        }
+
+        let val = getRandomNumberByTier(tier, problemMode === 'friends');
+
+        if (op === '-') {
+          if (runningTotal <= 2) {
+            op = '+';
+          } else {
+            const maxAllowedSub = runningTotal - 1;
+            if (val > maxAllowedSub) {
+              val = Math.max(1, Math.floor(Math.random() * maxAllowedSub) + 1);
+            }
+          }
+        }
+
+        if (op === '+') {
+          runningTotal += val;
+        } else {
+          runningTotal -= val;
+        }
+
+        numbers.push({ op, val });
+        stepTargets.push(runningTotal);
+      }
+
+      return {
+        rows: numbers,
+        stepTargets: stepTargets,
+        expected: runningTotal
+      };
+    }
+
+    function nextProblem() {
+      currentProblem = generateProblem();
+      currentStepIndex = 0;
+      activeCols = determineRequiredColumns(currentProblem);
+      renderSorobanColumns();
+
+      document.getElementById('btn-check').style.display = 'block';
+      document.getElementById('btn-next').style.display = 'none';
+
+      const mathBox = document.getElementById('vertical-math-container');
+      mathBox.innerHTML = '';
+
+      currentProblem.rows.forEach((row, idx) => {
+        if (idx === currentProblem.rows.length - 1) {
+          const rowEl = document.createElement('div');
+          rowEl.className = 'math-op-row';
+          rowEl.innerHTML = `<span>${row.op}</span><span>${row.val}</span>`;
+          mathBox.appendChild(rowEl);
+        } else {
+          const rowEl = document.createElement('div');
+          rowEl.className = 'math-row';
+          rowEl.innerHTML = `<span>${row.op ? row.op + ' ' : ''}${row.val}</span>`;
+          mathBox.appendChild(rowEl);
+        }
+      });
+
+      const ansEl = document.createElement('div');
+      ansEl.className = 'math-ans-row';
+      ansEl.id = 'val-ans';
+      ansEl.textContent = '?';
+      mathBox.appendChild(ansEl);
+
+      const opLabels = { add: 'Add (+)', sub: 'Sub (-)', mixed: 'Mix (±)' };
+      const modeLabelMap = {
+        '1': '1D',
+        '2': '2D',
+        'mix-1-2': 'Mix 1&2',
+        '3': '3D',
+        'mix-2-3': 'Mix 2&3',
+        'mix-1-2-3': 'Mix 1-3'
+      };
+
+      document.getElementById('rule-tip').textContent = `${opLabels[operationMode]} • ${modeLabelMap[digitMode]} (${numRows}R) • ${activeCols.length} Rods`;
+      updateStepInstruction();
+    }
+
+    function verifySolution() {
+      const currentTotal = getBoardTotal();
+      const guideText = document.getElementById('guide-text');
+      const guideIcon = document.getElementById('guide-icon');
+
+      if (currentTotal === currentProblem.expected) {
+        playWinSound();
+        streak++;
+        document.getElementById('streak-num').textContent = streak;
+
+        if (streak > highScore) {
+          highScore = streak;
+          localStorage.setItem('soroban_high_streak', highScore);
+          document.getElementById('high-score').textContent = highScore;
+        }
+
+        document.getElementById('val-ans').textContent = currentTotal;
+        guideIcon.textContent = '🏆';
+        guideText.innerHTML = `<span style="color: #4ade80;">🎉 Perfect! Beads match ${currentTotal}. Ready for next problem!</span>`;
+        document.getElementById('btn-check').style.display = 'none';
+        document.getElementById('btn-next').style.display = 'block';
+      } else {
+        playTone(180, 0.25, 'sawtooth');
+        streak = 0;
+        document.getElementById('streak-num').textContent = streak;
+        guideIcon.textContent = '⚠️';
+        guideText.innerHTML = `<span style="color: #f87171;">Beads show ${currentTotal}, need ${currentProblem.expected}. Check your calculations!</span>`;
+      }
+    }
+
+    updateDisplayLayout();
+    updateSettings();
+  </script>
+</body>
+</html>
